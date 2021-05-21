@@ -1048,4 +1048,26 @@ mod tests {
         assert_optimized_plan_eq(&plan, expected);
         Ok(())
     }
+
+    #[test]
+    fn project_and_filter_with_table_provider_inexact() -> Result<()> {
+        let plan =
+            table_scan_with_pushdown_provider(TableProviderFilterPushDown::Inexact)?;
+
+        let plan = LogicalPlanBuilder::from(&plan)
+            .project(vec![col("a")])?
+            .filter(col("a").eq(lit(1i64)))?
+            .build()?;
+
+        let expected = "Projection: #a\
+            \n  Filter: #a Eq Int64(1)\
+            \n    TableScan: projection=None, filters=[#a Eq Int64(1)]";
+
+        // currently returning:
+        // "Projection: #a\
+        // \n  Filter: #a Eq Int64(1) And #a Eq Int64(1)\
+        // \n    TableScan: projection=None, filters=[#a Eq Int64(1), #a Eq Int64(1)]";
+        assert_optimized_plan_eq(&plan, expected);
+        Ok(())
+    }
 }
