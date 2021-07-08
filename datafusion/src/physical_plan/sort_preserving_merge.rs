@@ -26,7 +26,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use arrow::{
-    array::{make_array as make_arrow_array, Array, ArrayRef, MutableArrayData, DynComparator},
+    array::{make_array as make_arrow_array, ArrayRef, MutableArrayData},
     compute::SortOptions,
     datatypes::SchemaRef,
     error::{ArrowError, Result as ArrowResult},
@@ -177,8 +177,6 @@ impl ExecutionPlan for SortPreservingMergeExec {
     }
 }
 
-type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> ArrowResult<DynComparator<'a>> + 'a>;
-
 /// A `SortKeyCursor` is created from a `RecordBatch`, and a set of `PhysicalExpr` that when
 /// evaluated on the `RecordBatch` yield the sort keys.
 ///
@@ -284,7 +282,7 @@ impl SortKeyCursor {
         // We want to be able to call this function in the for loop below
         // (in the `true, true` match).
         //
-        let mut cmp: Option<ComparatorMaker> = None;
+        let mut cmp = None;
 
         for ((l, r), sort_options) in zipped {
             match (l.is_valid(self.cur_row), r.is_valid(other.cur_row)) {
@@ -299,14 +297,12 @@ impl SortKeyCursor {
                     // TODO: Building the predicate each time is sub-optimal
                     if cmp.is_none() {
                         cmp = Some(
-                            Box::new(move || {
-                                arrow::array::build_compare(l.as_ref(), r.as_ref())
-                            })
+                            arrow::array::build_compare(l.as_ref(), r.as_ref())?
                         );
                     }
 
                     // This unwrap is safe because we just assigned to `cmp` if it was None
-                    let cmp_fn = cmp.as_ref().unwrap().as_ref()()?;
+                    let cmp_fn = cmp.as_ref().unwrap();
                     println!(
                         "build_compare called, result: {:?}",
                         cmp_fn(self.cur_row, other.cur_row)
