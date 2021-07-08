@@ -20,6 +20,7 @@
 use std::any::Any;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
+use std::fmt::Debug;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -176,6 +177,9 @@ impl ExecutionPlan for SortPreservingMergeExec {
     }
 }
 
+type Comparator = Box<dyn Fn(usize, usize) -> Ordering>;
+type ComparatorMaker = Box<dyn Send + Sync + Fn() -> Comparator>;
+
 /// A `SortKeyCursor` is created from a `RecordBatch`, and a set of `PhysicalExpr` that when
 /// evaluated on the `RecordBatch` yield the sort keys.
 ///
@@ -184,12 +188,36 @@ impl ExecutionPlan for SortPreservingMergeExec {
 ///
 /// `SortKeyCursor::compare` can then be used to compare the sort key pointed to by this
 /// row cursor, with that of another `SortKeyCursor`
-#[derive(Debug, Clone)]
 struct SortKeyCursor {
     columns: Vec<ArrayRef>,
     batch: RecordBatch,
     cur_row: usize,
     num_rows: usize,
+    // cmp: Option<ComparatorMaker>,
+}
+
+impl Debug for SortKeyCursor {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SortKeyCursor")
+            .field("columns", &self.columns)
+            .field("batch", &self.batch)
+            .field("cur_row", &self.cur_row)
+            .field("num_rows", &self.num_rows)
+            .field("cmp", &"<FUNC>")
+            .finish()
+    }
+}
+
+impl Clone for SortKeyCursor {
+    fn clone(&self) -> Self {
+        Self {
+            columns: self.columns.clone(),
+            batch: self.batch.clone(),
+            cur_row: self.cur_row,
+            num_rows: self.num_rows,
+            // cmp: None,
+        }
+    }
 }
 
 impl SortKeyCursor {
@@ -204,6 +232,7 @@ impl SortKeyCursor {
             num_rows: batch.num_rows(),
             columns,
             batch,
+            // cmp: None,
         })
     }
 
@@ -220,10 +249,13 @@ impl SortKeyCursor {
 
     /// Compares the sort key pointed to by this instance's row cursor with that of another
     fn compare(
-        &self,
+        &mut self,
         other: &SortKeyCursor,
         options: &[SortOptions],
     ) -> Result<Ordering> {
+        println!("compare called");
+        // dbg!(other);
+        // dbg!(options);
         if self.columns.len() != other.columns.len() {
             return Err(DataFusionError::Internal(format!(
                 "SortKeyCursors had inconsistent column counts: {} vs {}",
@@ -246,6 +278,15 @@ impl SortKeyCursor {
             .zip(other.columns.iter())
             .zip(options.iter());
 
+        //
+        // GOAL - to lazily initialise the function returned by
+        // arrow::array::build_compare(l.as_ref(), r.as_ref())
+        //
+        // We want to be able to call this function in the for loop below
+        // (in the `true, true` match).
+        //
+        let mut cmp: Option<ComparatorMaker> = None;
+
         for ((l, r), sort_options) in zipped {
             match (l.is_valid(self.cur_row), r.is_valid(other.cur_row)) {
                 (false, true) if sort_options.nulls_first => return Ok(Ordering::Less),
@@ -257,8 +298,18 @@ impl SortKeyCursor {
                 (false, false) => {}
                 (true, true) => {
                     // TODO: Building the predicate each time is sub-optimal
-                    let c = arrow::array::build_compare(l.as_ref(), r.as_ref())?;
-                    match c(self.cur_row, other.cur_row) {
+                    if cmp.is_none() {
+                        cmp = Some(Box::new(|| {
+                            arrow::array::build_compare(l.as_ref(), r.as_ref()).unwrap()
+                        }));
+                    }
+
+                    let cmp_fn = cmp.unwrap()();
+                    println!(
+                        "build_compare called, result: {:?}",
+                        cmp_fn(self.cur_row, other.cur_row)
+                    );
+                    match cmp_fn(self.cur_row, other.cur_row) {
                         Ordering::Equal => {}
                         o if sort_options.descending => return Ok(o.reverse()),
                         o => return Ok(o),
