@@ -178,11 +178,11 @@ impl ExecutionPlan for SortPreservingMergeExec {
 }
 
 type Comparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
-type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> Comparator<'a> + 'a>;
+type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> ArrowResult<Comparator<'a>> + 'a>;
 
 fn make_comparator<'a>(l: &'a dyn Array, r: &'a dyn Array) -> ComparatorMaker<'a> {
     Box::new(move || {
-        arrow::array::build_compare(l, r).unwrap()
+        arrow::array::build_compare(l, r)
     })
 }
 
@@ -308,7 +308,8 @@ impl SortKeyCursor {
                         cmp = Some(make_comparator(l.as_ref(), r.as_ref()));
                     }
 
-                    let cmp_fn = cmp.as_ref().unwrap()();
+                    // This unwrap is safe because we just assigned to `cmp` if it was None
+                    let cmp_fn = cmp.as_ref().unwrap().as_ref()()?;
                     println!(
                         "build_compare called, result: {:?}",
                         cmp_fn(self.cur_row, other.cur_row)
