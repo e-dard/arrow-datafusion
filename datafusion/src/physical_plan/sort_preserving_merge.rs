@@ -26,7 +26,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use arrow::{
-    array::{make_array as make_arrow_array, Array, ArrayRef, MutableArrayData},
+    array::{make_array as make_arrow_array, Array, ArrayRef, MutableArrayData, DynComparator},
     compute::SortOptions,
     datatypes::SchemaRef,
     error::{ArrowError, Result as ArrowResult},
@@ -177,8 +177,7 @@ impl ExecutionPlan for SortPreservingMergeExec {
     }
 }
 
-type Comparator<'a> = Box<dyn Fn(usize, usize) -> Ordering + 'a>;
-type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> ArrowResult<Comparator<'a>> + 'a>;
+type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> ArrowResult<DynComparator<'a>> + 'a>;
 
 fn make_comparator<'a>(l: &'a dyn Array, r: &'a dyn Array) -> ComparatorMaker<'a> {
     Box::new(move || {
