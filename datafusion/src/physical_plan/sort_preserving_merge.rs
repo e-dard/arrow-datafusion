@@ -26,7 +26,7 @@ use std::sync::Arc;
 use std::task::{Context, Poll};
 
 use arrow::{
-    array::{make_array as make_arrow_array, ArrayRef, MutableArrayData},
+    array::{make_array as make_arrow_array, Array, ArrayRef, MutableArrayData},
     compute::SortOptions,
     datatypes::SchemaRef,
     error::{ArrowError, Result as ArrowResult},
@@ -178,7 +178,13 @@ impl ExecutionPlan for SortPreservingMergeExec {
 }
 
 type Comparator = Box<dyn Fn(usize, usize) -> Ordering>;
-type ComparatorMaker = Box<dyn Send + Sync + Fn() -> Comparator>;
+type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> Comparator + 'a>;
+
+fn make_comparator<'a>(l: &'a dyn Array, r: &'a dyn Array) -> ComparatorMaker<'a> {
+    Box::new(|| {
+        arrow::array::build_compare(l, r).unwrap()
+    })
+}
 
 /// A `SortKeyCursor` is created from a `RecordBatch`, and a set of `PhysicalExpr` that when
 /// evaluated on the `RecordBatch` yield the sort keys.
@@ -299,9 +305,7 @@ impl SortKeyCursor {
                 (true, true) => {
                     // TODO: Building the predicate each time is sub-optimal
                     if cmp.is_none() {
-                        cmp = Some(Box::new(|| {
-                            arrow::array::build_compare(l.as_ref(), r.as_ref()).unwrap()
-                        }));
+                        cmp = Some(make_comparator(l.as_ref(), r.as_ref()));
                     }
 
                     let cmp_fn = cmp.unwrap()();
