@@ -255,7 +255,7 @@ impl SortKeyCursor {
 
     /// Compares the sort key pointed to by this instance's row cursor with that of another
     fn compare(
-        &mut self,
+        &self,
         other: &SortKeyCursor,
         options: &[SortOptions],
     ) -> Result<Ordering> {
