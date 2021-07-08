@@ -179,12 +179,6 @@ impl ExecutionPlan for SortPreservingMergeExec {
 
 type ComparatorMaker<'a> = Box<dyn Send + Sync + Fn() -> ArrowResult<DynComparator<'a>> + 'a>;
 
-fn make_comparator<'a>(l: &'a dyn Array, r: &'a dyn Array) -> ComparatorMaker<'a> {
-    Box::new(move || {
-        arrow::array::build_compare(l, r)
-    })
-}
-
 /// A `SortKeyCursor` is created from a `RecordBatch`, and a set of `PhysicalExpr` that when
 /// evaluated on the `RecordBatch` yield the sort keys.
 ///
@@ -304,7 +298,11 @@ impl SortKeyCursor {
                 (true, true) => {
                     // TODO: Building the predicate each time is sub-optimal
                     if cmp.is_none() {
-                        cmp = Some(make_comparator(l.as_ref(), r.as_ref()));
+                        cmp = Some(
+                            Box::new(move || {
+                                arrow::array::build_compare(l.as_ref(), r.as_ref())
+                            })
+                        );
                     }
 
                     // This unwrap is safe because we just assigned to `cmp` if it was None
