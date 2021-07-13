@@ -29,7 +29,7 @@ publish = false
 
 
 [dev-dependencies]
-arrow-flight = { version = "4.0" }
+arrow-flight = { git = "https://github.com/apache/arrow-rs.git", rev="6698eed2900cffadc549a92defe2030d36ccf0d6" }
 datafusion = { path = "../datafusion" }
 prost = "0.7"
 tonic = "0.4"
