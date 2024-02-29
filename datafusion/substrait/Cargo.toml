@@ -33,7 +33,7 @@ chrono = { version = "0.4.23", default-features = false }
 datafusion = { version = "28.0.0", path = "../core" }
 itertools = "0.11"
 object_store = "0.6.1"
-prost = "0.11"
+prost = "0.12"
 prost-types = "0.11"
 substrait = "0.12.0"
 tokio = "1.17"
