@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           # these represent dependencies downloaded by cargo
           # and thus do not depend on the OS, arch nor rust version.
@@ -86,7 +86,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -111,7 +111,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -218,7 +218,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -355,7 +355,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -431,7 +431,7 @@ jobs:
   #         rustup default stable
   #         rustup component add rustfmt clippy
   #     - name: Cache Cargo
-  #       uses: actions/cache@v3
+  #       uses: actions/cache@v4
   #       with:
   #         path: /home/runner/.cargo
   #         # this key is not equal because the user is different than on a container (runner vs github)
@@ -458,7 +458,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -484,7 +484,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -509,7 +509,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
@@ -541,7 +541,7 @@ jobs:
         with:
           submodules: true
       - name: Cache Cargo
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: /github/home/.cargo
           # this key equals the ones on `linux-build-lib` for re-use
