@@ -55,7 +55,7 @@ log = { workspace = true }
 paste = "1.0.14"
 
 [dev-dependencies]
-criterion = { version = "0.5", features = ["async_tokio"] }
+criterion = { version = "0.7", features = ["async_tokio"] }
 
 [[bench]]
 harness = false
