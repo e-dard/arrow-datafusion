@@ -40,7 +40,7 @@ jobs:
           cat message.md
 
       - name: Post the comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
