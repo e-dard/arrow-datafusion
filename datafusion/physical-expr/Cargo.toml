@@ -51,7 +51,7 @@ arrow-buffer = { workspace = true }
 arrow-ord = { workspace = true }
 arrow-schema = { workspace = true }
 arrow-string = { workspace = true }
-base64 = { version = "0.22", optional = true }
+base64 = { version = "0.23", optional = true }
 chrono = { workspace = true }
 datafusion-common = { workspace = true, default-features = true }
 datafusion-execution = { workspace = true }
